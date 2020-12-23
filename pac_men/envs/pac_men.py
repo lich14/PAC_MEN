@@ -3,6 +3,10 @@ import numpy as np
 from gym import spaces
 N_DISCRETE_ACTIONS = 5
 N_OBSERVATION_SCALE = 2
+WALL = -5
+BLANK_SPACE = 0
+REWARD_POINT = 5
+AGENT_POINT = 1
 
 
 class CustomEnv(gym.Env):
@@ -22,11 +26,11 @@ class CustomEnv(gym.Env):
         super(CustomEnv, self).__init__()
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
         self.observation_space = spaces.Box(low=-10, high=10, shape=(21, 21), dtype=np.uint8)
-        self.agent_num = agent_num
+        self.agent_num = n_agents
         # Here initial maze with tini size
         # TODO: add more suitable environments
 
-        self.env_matrix = 1 * np.ones([21, 21])
+        self.env_matrix = WALL * np.ones([21, 21])
         self.init_env_matrix()
         self.time_limit = 50
         self.time_step = 0
@@ -36,15 +40,15 @@ class CustomEnv(gym.Env):
             assert (self.env_matrix.shape[0] == 21)
 
             # first initial the environment
-            self.env_matrix[2:7, 9:12] = 0
-            self.env_matrix[7:10, 10] = 0
-            self.env_matrix[10:13, 9:12] = 0
-            self.env_matrix[11, 7:9] = 0
-            self.env_matrix[11, 12:14] = 0
-            self.env_matrix[10:13, 14:19] = 0
-            self.env_matrix[10:13, 2:7] = 0
-            self.env_matrix[13, 10] = 0
-            self.env_matrix[14:19, 9:12] = 0
+            self.env_matrix[2:7, 9:12] = BLANK_SPACE
+            self.env_matrix[7:10, 10] = BLANK_SPACE
+            self.env_matrix[10:13, 9:12] = BLANK_SPACE
+            self.env_matrix[11, 7:9] = BLANK_SPACE
+            self.env_matrix[11, 12:14] = BLANK_SPACE
+            self.env_matrix[10:13, 14:19] = BLANK_SPACE
+            self.env_matrix[10:13, 2:7] = BLANK_SPACE
+            self.env_matrix[13, 10] = BLANK_SPACE
+            self.env_matrix[14:19, 9:12] = BLANK_SPACE
             self.agent_position = []
 
             # second initial the environment
@@ -66,7 +70,7 @@ class CustomEnv(gym.Env):
                 point_set.append(point)
 
         for item in point_set:
-            self.env_matrix[item[0], item[1]] = 2
+            self.env_matrix[item[0], item[1]] = REWARD_POINT
 
         return point_set
 
@@ -86,11 +90,6 @@ class CustomEnv(gym.Env):
             # 1. give matrix information in raleted scale
             # 2. overlap agents' positions if they are in current agent's observation scale
             # the weight of agents is larger then it of environment information such as reward points
-
-    def test_init_agent_point(self):
-        self.agent_position[0] = np.array(self.reward_point_set_current[0])
-        self.agent_position[1] = np.array(self.reward_point_set_current[0])
-        self.step([0, 0, 0, 0])
 
     def step(self, action):
         # Execute one time step within the environment
@@ -170,7 +169,9 @@ class CustomEnv(gym.Env):
             self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 2)
 
         next_obs = [self.get_local_observation(i) for i in range(self.agent_num)]
-        return next_obs, return_reward, done
+        info = {}
+
+        return next_obs, return_reward, done, info
 
     def get_local_observation(self, id):
         current_position = self.agent_position[id]
@@ -200,6 +201,8 @@ class CustomEnv(gym.Env):
         # Render the environment to the screen
         pass
 
+    def seed(self, seed=None):
+        pass
 
-env = CustomEnv(4)
-env.test_init_agent_point()
+    def close(self):
+        pass

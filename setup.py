@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='gym_pac_men',
+    name='pac_men',
     version='0.0.1',
     author="Chenghao Li",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
