@@ -3,10 +3,10 @@ import numpy as np
 from gym import spaces
 N_DISCRETE_ACTIONS = 5
 N_OBSERVATION_SCALE = 2
-WALL = -5
+WALL = -1
 BLANK_SPACE = 0
-REWARD_POINT = 5
-AGENT_POINT = 1
+REWARD_POINT = 1
+AGENT_POINT = 0.1
 
 
 class CustomEnv(gym.Env):
@@ -22,21 +22,52 @@ class CustomEnv(gym.Env):
     def __init__(
             self,
             n_agents: int,
+            mode: str,
     ):
         super(CustomEnv, self).__init__()
-        self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
-        self.observation_space = spaces.Box(low=-10, high=10, shape=(21, 21), dtype=np.uint8)
-        self.agent_num = n_agents
+        sa_action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
+        self.action_space = spaces.Tuple(tuple(n_agents * [sa_action_space]))
+
+        sa_obs_space = spaces.Box(low=-5, high=5, shape=((2 * N_OBSERVATION_SCALE + 1) * (2 * N_OBSERVATION_SCALE + 1),), dtype=np.uint8)
+        self.observation_space = spaces.Tuple(tuple(n_agents * [sa_obs_space]))
+
+        self.n_agents = n_agents
         # Here initial maze with tini size
         # TODO: add more suitable environments
 
-        self.env_matrix = WALL * np.ones([21, 21])
+        if mode == 'tini':
+            self.env_matrix = WALL * np.ones([21, 21])
+        elif mode == 'small':
+            self.env_matrix = WALL * np.ones([25, 25])
+        elif mode == 'large':
+            self.env_matrix = WALL * np.ones([33, 33])
+
+        self.mode = mode
         self.init_env_matrix()
-        self.time_limit = 50
+        self.time_limit = 100
         self.time_step = 0
 
-    def init_env_matrix(self, mode='tini'):
-        if mode == 'tini':
+    def init_reward_point_withdiff_mode(self):
+        if self.mode == 'tini':
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 2, 9)
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 15, 9)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 15)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 2)
+
+        elif self.mode == 'small':
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 2, 11)
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 19, 11)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 13, 19)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 13, 2)
+
+        elif self.mode == 'large':
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 2, 15)
+            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 20, 15)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 19, 27)
+            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 19, 2)
+
+    def init_env_matrix(self):
+        if self.mode == 'tini':
             assert (self.env_matrix.shape[0] == 21)
 
             # first initial the environment
@@ -53,13 +84,54 @@ class CustomEnv(gym.Env):
 
             # second initial the environment
             self.reward_point_set_current = []
-            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 2, 9)
-            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 15, 9)
-            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 15)
-            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 2)
+            self.init_reward_point_withdiff_mode()
 
             # third initial agents
             self.init_agent_point(3, 3, 10, 9)
+
+        elif self.mode == 'small':
+            assert (self.env_matrix.shape[0] == 25)
+
+            # first initial the environment
+            self.env_matrix[2:7, 11:14] = BLANK_SPACE
+            self.env_matrix[7:13, 12] = BLANK_SPACE
+            self.env_matrix[13:16, 11:14] = BLANK_SPACE
+            self.env_matrix[14, 7:11] = BLANK_SPACE
+            self.env_matrix[14, 14:18] = BLANK_SPACE
+            self.env_matrix[13:16, 18:23] = BLANK_SPACE
+            self.env_matrix[13:16, 2:7] = BLANK_SPACE
+            self.env_matrix[16:18, 12] = BLANK_SPACE
+            self.env_matrix[18:23, 11:14] = BLANK_SPACE
+            self.agent_position = []
+
+            # second initial the environment
+            self.reward_point_set_current = []
+            self.init_reward_point_withdiff_mode()
+
+            # third initial agents
+            self.init_agent_point(3, 3, 13, 11)
+
+        elif self.mode == 'large':
+            assert (self.env_matrix.shape[0] == 33)
+
+            # first initial the environment
+            self.env_matrix[2:7, 15:18] = BLANK_SPACE
+            self.env_matrix[7:19, 16] = BLANK_SPACE
+            self.env_matrix[19:22, 15:18] = BLANK_SPACE
+            self.env_matrix[20, 7:15] = BLANK_SPACE
+            self.env_matrix[20, 18:26] = BLANK_SPACE
+            self.env_matrix[19:22, 26:31] = BLANK_SPACE
+            self.env_matrix[19:22, 2:7] = BLANK_SPACE
+            self.env_matrix[22:26, 16] = BLANK_SPACE
+            self.env_matrix[26:31, 15:18] = BLANK_SPACE
+            self.agent_position = []
+
+            # second initial the environment
+            self.reward_point_set_current = []
+            self.init_reward_point_withdiff_mode()
+
+            # third initial agents
+            self.init_agent_point(3, 3, 19, 15)
 
     def init_reward_point(self, length, wide, num, init_length, init_wide):
         assert (length != 0 and wide != 0 and num != 0)
@@ -77,7 +149,7 @@ class CustomEnv(gym.Env):
     def init_agent_point(self, length, wide, init_length, init_wide):
         assert (length != 0 and wide != 0)
         point_set = []
-        while len(point_set) != self.agent_num:
+        while len(point_set) != self.n_agents:
             point = [np.random.randint(length) + init_length, np.random.randint(wide) + init_wide]
             if point not in point_set:
                 point_set.append(point)
@@ -91,12 +163,17 @@ class CustomEnv(gym.Env):
             # 2. overlap agents' positions if they are in current agent's observation scale
             # the weight of agents is larger then it of environment information such as reward points
 
+    def test_init_agent_point(self):
+        self.agent_position[0] = np.array(self.reward_point_set_current[0])
+        self.agent_position[1] = np.array(self.reward_point_set_current[0])
+        self.step([0, 0, 0, 0])
+
     def step(self, action):
         # Execute one time step within the environment
         # Here are five actions
         # 0: up 1: down 2: right 3: left 4: eat
 
-        assert (len(action) == self.agent_num)
+        assert (len(action) == self.n_agents)
         eaten_reward_points = []
         eaten_reward_points_array = []
         return_reward = -0.1 * np.ones(4)
@@ -129,12 +206,12 @@ class CustomEnv(gym.Env):
                 raise (print(f'wrong action label: agent{id} action is {item}'))
 
             next_state = self.agent_position[id] + delta_xy
-            if self.env_matrix[next_state[0], next_state[1]] != 1:
+            if self.env_matrix[next_state[0], next_state[1]] != WALL:
                 # check if next state is in the wall
                 self.agent_position[id] = next_state
 
             if ifeat:
-                if self.env_matrix[self.agent_position[id][0], self.agent_position[id][1]] == 2:
+                if self.env_matrix[self.agent_position[id][0], self.agent_position[id][1]] == REWARD_POINT:
                     # this agent want to eat the reward point
                     eaten_reward_points.append([id, self.agent_position[id]])
                     eaten_reward_points_array.append(self.agent_position[id])
@@ -151,7 +228,7 @@ class CustomEnv(gym.Env):
 
         # remove the reward point
         for item in eaten_reward_points:
-            self.env_matrix[item[1][0], item[1][1]] = 0
+            self.env_matrix[item[1][0], item[1][1]] = BLANK_SPACE
             if item[1].tolist() in self.reward_point_set_current:
                 self.reward_point_set_current.remove(item[1].tolist())
 
@@ -159,19 +236,16 @@ class CustomEnv(gym.Env):
         if self.time_step >= self.time_limit:
             # done only if time steps exceed limitation
             done = True
-
+        dones = [done for _ in range(self.n_agents)]
         if len(self.reward_point_set_current) == 0:
             # all current reward points are eaten
             # regenerate reward points
-            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 2, 9)
-            self.reward_point_set_current += self.init_reward_point(4, 3, 3, 15, 9)
-            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 15)
-            self.reward_point_set_current += self.init_reward_point(3, 4, 3, 10, 2)
+            self.init_reward_point_withdiff_mode()
 
-        next_obs = [self.get_local_observation(i) for i in range(self.agent_num)]
+        next_obs = tuple([self.get_local_observation(i) for i in range(self.n_agents)])
         info = {}
 
-        return next_obs, return_reward, done, info
+        return next_obs, return_reward, dones, info
 
     def get_local_observation(self, id):
         current_position = self.agent_position[id]
@@ -180,21 +254,21 @@ class CustomEnv(gym.Env):
         min_index_1 = current_position[1] - N_OBSERVATION_SCALE
 
         obs = self.env_matrix[min_index_0:min_index_0 + length, min_index_1:min_index_1 + length]
-        for i in range(self.agent_num):
+        for i in range(self.n_agents):
             if i != id:
                 other_agent_position = self.agent_position[i]
                 if other_agent_position[0] >= min_index_0 and other_agent_position[0] < min_index_0 + length:
                     if other_agent_position[1] >= min_index_1 and other_agent_position[1] < min_index_1 + length:
-                        obs[other_agent_position[0] - min_index_0][other_agent_position[1] - min_index_1] = 3
+                        obs[other_agent_position[0] - min_index_0][other_agent_position[1] - min_index_1] = AGENT_POINT
 
-        return obs
+        return obs.reshape(-1)
 
     def reset(self):
         # Reset the state of the environment to an initial state
         self.init_env_matrix()
         self.time_step = 0
 
-        obs = [self.get_local_observation(i) for i in range(self.agent_num)]
+        obs = tuple([self.get_local_observation(i) for i in range(self.n_agents)])
         return obs
 
     def render(self, mode='human', close=False):

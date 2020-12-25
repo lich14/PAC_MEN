@@ -1,1 +1,0 @@
-from pac_men.envs.pac_men import CustomEnv
